@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Registry Lookup</title>
+<title>Registry Lookup</title>
 
 <style>
 body {
-    font-family: Arial, sans-serif;
+    font-family: Arial;
     background: #0f0f0f;
     color: white;
     text-align: center;
@@ -48,31 +48,33 @@ button {
 
 <body>
 
-<h1>Roblox Registry Lookup</h1>
+<h1>Registry Lookup</h1>
 
 <input id="search" placeholder="Username or Roblox ID">
-<button onclick="search()">Search</button>
+<button onclick="searchUser()">Search</button>
 
 <div id="results"></div>
 
 <script>
 
-// 🔗 GOOGLE VISUALIZATION LINK
 const URL =
 "https://docs.google.com/spreadsheets/d/1EaZfeDPhuE48ZX8-PdE01MWW-JUZkvsqBmdICfgcdls/gviz/tq?tqx=out:json&gid=1195980622";
 
-let database = [];
+// 🧠 PRIVATE INDEXED DATABASE
+const userIndex = new Map();
+let fullDatabase = [];
 
-// ---------------- LOAD DATA ----------------
+// ---------------- LOAD & BUILD INDEX ----------------
 async function load() {
-    try {
-        const res = await fetch(URL);
-        const text = await res.text();
+    const res = await fetch(URL);
+    const text = await res.text();
 
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        const rows = json.table.rows;
+    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const rows = json.table.rows;
 
-        database = rows.map(r => ({
+    rows.forEach(r => {
+
+        const record = {
             username: String(r.c[0]?.v || "").trim().toLowerCase(),
             id: String(r.c[1]?.v || "").trim(),
             reason: String(r.c[2]?.v || ""),
@@ -81,13 +83,16 @@ async function load() {
             duration: String(r.c[5]?.v || ""),
             appealable: String(r.c[6]?.v || ""),
             appealed: String(r.c[7]?.v || "")
-        }));
+        };
 
-        console.log("Loaded entries:", database.length);
+        fullDatabase.push(record);
 
-    } catch (err) {
-        console.error("Failed to load sheet:", err);
-    }
+        // 🔥 INDEX BOTH USERNAME + ID
+        if (record.username) userIndex.set(record.username, record);
+        if (record.id) userIndex.set(record.id, record);
+    });
+
+    console.log("Indexed users:", userIndex.size);
 }
 
 // ---------------- EXPIRY CHECK ----------------
@@ -100,58 +105,48 @@ function isExpired(dateStr) {
     return d.getTime() < Date.now();
 }
 
-// ---------------- SEARCH ----------------
-function search() {
+// ---------------- SEARCH (FAST LOOKUP) ----------------
+function searchUser() {
     const q = document.getElementById("search").value.trim().toLowerCase();
     const out = document.getElementById("results");
 
     if (!q) return;
 
-    const results = database.filter(x => {
-        return (
-            x.username.includes(q) ||
-            x.id === q ||
-            x.id.includes(q)
-        );
-    });
+    const result = userIndex.get(q);
 
-    if (results.length === 0) {
-        out.innerHTML = "<p class='bad'>No match found</p>";
+    if (!result) {
+        out.innerHTML = "<p class='bad'>User NOT found in database</p>";
         return;
     }
 
-    out.innerHTML = results.map(r => {
+    const expired = isExpired(result.expiry);
+    const appealed = result.appealed.toLowerCase().includes("appeal");
 
-        const expired = isExpired(r.expiry);
-        const appealed = r.appealed.toLowerCase().includes("appeal");
-
-        return `
+    out.innerHTML = `
         <div class="card">
-            <b>Username:</b> ${r.username}<br>
-            <b>Roblox ID:</b> ${r.id}<br><br>
+            <b>Username:</b> ${result.username}<br>
+            <b>Roblox ID:</b> ${result.id}<br><br>
 
-            <b>Reason:</b> ${r.reason}<br>
-            <b>Issued:</b> ${r.issued}<br>
+            <b>Reason:</b> ${result.reason}<br>
+            <b>Issued:</b> ${result.issued}<br>
 
             <b>Expiry:</b>
             <span class="${expired ? 'bad' : 'good'}">
-                ${r.expiry || "N/A"} ${expired ? "(EXPIRED)" : "(ACTIVE)"}
+                ${result.expiry || "N/A"} ${expired ? "(EXPIRED)" : "(ACTIVE)"}
             </span><br>
 
-            <b>Duration:</b> ${r.duration}<br>
-
-            <b>Appealable:</b> ${r.appealable}<br>
+            <b>Duration:</b> ${result.duration}<br>
+            <b>Appealable:</b> ${result.appealable}<br>
 
             <b>Status:</b>
             <span class="${appealed ? 'warn' : 'good'}">
                 ${appealed ? "APPEALED" : "CLEAR"}
             </span>
         </div>
-        `;
-    }).join("");
+    `;
 }
 
-// auto load on startup
+// auto load
 load();
 
 </script>
