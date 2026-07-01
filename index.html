@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Roblox Registry Lookup</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #0f0f0f;
+    color: white;
+    text-align: center;
+    padding: 40px;
+}
+
+input {
+    padding: 10px;
+    width: 280px;
+    border-radius: 6px;
+    border: none;
+}
+
+button {
+    padding: 10px 15px;
+    margin-left: 5px;
+    border-radius: 6px;
+    border: none;
+    background: #2d6cdf;
+    color: white;
+    cursor: pointer;
+}
+
+.card {
+    margin-top: 20px;
+    padding: 15px;
+    background: #1a1a1a;
+    border-radius: 10px;
+    display: inline-block;
+    text-align: left;
+    width: 420px;
+}
+
+.good { color: #4ade80; }
+.bad { color: #fb7185; }
+.warn { color: #facc15; }
+</style>
+</head>
+
+<body>
+
+<h1>Roblox Registry Lookup</h1>
+
+<input id="search" placeholder="Username or Roblox ID">
+<button onclick="search()">Search</button>
+
+<div id="results"></div>
+
+<script>
+
+// ✅ YOUR GOOGLE VISUALIZATION LINK
+const URL =
+"https://docs.google.com/spreadsheets/d/1EaZfeDPhuE48ZX8-PdE01MWW-JUZkvsqBmdICfgcdls/gviz/tq?tqx=out:json&gid=1195980622";
+
+let database = [];
+
+// ---------- LOAD DATA ----------
+async function load() {
+    const res = await fetch(URL);
+    const text = await res.text();
+
+    // strip Google wrapper
+    const json = JSON.parse(text.substring(47).slice(0, -2));
+
+    const rows = json.table.rows;
+
+    database = rows.map(r => ({
+        username: r.c[0]?.v || "",
+        id: r.c[1]?.v || "",
+        reason: r.c[2]?.v || "",
+        issued: r.c[3]?.v || "",
+        expiry: r.c[4]?.v || "",
+        duration: r.c[5]?.v || "",
+        appealable: r.c[6]?.v || "",
+        appealed: r.c[7]?.v || ""
+    }));
+
+    console.log("Loaded records:", database.length);
+}
+
+// ---------- CHECK EXPIRY ----------
+function isExpired(dateStr) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return !isNaN(d) && d < new Date();
+}
+
+// ---------- SEARCH ----------
+function search() {
+    const q = document.getElementById("search").value.toLowerCase().trim();
+    const out = document.getElementById("results");
+
+    if (!q) return;
+
+    const results = database.filter(x =>
+        x.username.toLowerCase().includes(q) ||
+        x.id.toLowerCase().includes(q)
+    );
+
+    if (!results.length) {
+        out.innerHTML = "<p class='bad'>No match found</p>";
+        return;
+    }
+
+    out.innerHTML = results.map(r => {
+
+        const expired = isExpired(r.expiry);
+        const appealed = (r.appealed || "").toLowerCase().includes("appeal");
+
+        return `
+        <div class="card">
+            <b>Username:</b> ${r.username}<br>
+            <b>Roblox ID:</b> ${r.id}<br><br>
+
+            <b>Reason:</b> ${r.reason}<br>
+            <b>Issued:</b> ${r.issued}<br>
+
+            <b>Expiry:</b>
+            <span class="${expired ? 'bad' : 'good'}">
+                ${r.expiry || "N/A"} ${expired ? "(EXPIRED)" : "(ACTIVE)"}
+            </span><br>
+
+            <b>Duration:</b> ${r.duration}<br>
+
+            <b>Appealable:</b> ${r.appealable}<br>
+
+            <b>Status:</b>
+            <span class="${appealed ? 'warn' : 'good'}">
+                ${appealed ? "APPEALED" : "CLEAR"}
+            </span>
+        </div>
+        `;
+    }).join("");
+}
+
+// auto load
+load();
+
+</script>
+
+</body>
+</html>
