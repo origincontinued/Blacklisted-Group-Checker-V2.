@@ -57,56 +57,65 @@ button {
 
 <script>
 
-// ✅ YOUR GOOGLE VISUALIZATION LINK
+// 🔗 GOOGLE VISUALIZATION LINK
 const URL =
 "https://docs.google.com/spreadsheets/d/1EaZfeDPhuE48ZX8-PdE01MWW-JUZkvsqBmdICfgcdls/gviz/tq?tqx=out:json&gid=1195980622";
 
 let database = [];
 
-// ---------- LOAD DATA ----------
+// ---------------- LOAD DATA ----------------
 async function load() {
-    const res = await fetch(URL);
-    const text = await res.text();
+    try {
+        const res = await fetch(URL);
+        const text = await res.text();
 
-    // strip Google wrapper
-    const json = JSON.parse(text.substring(47).slice(0, -2));
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const rows = json.table.rows;
 
-    const rows = json.table.rows;
+        database = rows.map(r => ({
+            username: String(r.c[0]?.v || "").trim().toLowerCase(),
+            id: String(r.c[1]?.v || "").trim(),
+            reason: String(r.c[2]?.v || ""),
+            issued: String(r.c[3]?.v || ""),
+            expiry: String(r.c[4]?.v || ""),
+            duration: String(r.c[5]?.v || ""),
+            appealable: String(r.c[6]?.v || ""),
+            appealed: String(r.c[7]?.v || "")
+        }));
 
-    database = rows.map(r => ({
-        username: r.c[0]?.v || "",
-        id: r.c[1]?.v || "",
-        reason: r.c[2]?.v || "",
-        issued: r.c[3]?.v || "",
-        expiry: r.c[4]?.v || "",
-        duration: r.c[5]?.v || "",
-        appealable: r.c[6]?.v || "",
-        appealed: r.c[7]?.v || ""
-    }));
+        console.log("Loaded entries:", database.length);
 
-    console.log("Loaded records:", database.length);
+    } catch (err) {
+        console.error("Failed to load sheet:", err);
+    }
 }
 
-// ---------- CHECK EXPIRY ----------
+// ---------------- EXPIRY CHECK ----------------
 function isExpired(dateStr) {
     if (!dateStr) return false;
+
     const d = new Date(dateStr);
-    return !isNaN(d) && d < new Date();
+    if (isNaN(d)) return false;
+
+    return d.getTime() < Date.now();
 }
 
-// ---------- SEARCH ----------
+// ---------------- SEARCH ----------------
 function search() {
-    const q = document.getElementById("search").value.toLowerCase().trim();
+    const q = document.getElementById("search").value.trim().toLowerCase();
     const out = document.getElementById("results");
 
     if (!q) return;
 
-    const results = database.filter(x =>
-        x.username.toLowerCase().includes(q) ||
-        x.id.toLowerCase().includes(q)
-    );
+    const results = database.filter(x => {
+        return (
+            x.username.includes(q) ||
+            x.id === q ||
+            x.id.includes(q)
+        );
+    });
 
-    if (!results.length) {
+    if (results.length === 0) {
         out.innerHTML = "<p class='bad'>No match found</p>";
         return;
     }
@@ -114,7 +123,7 @@ function search() {
     out.innerHTML = results.map(r => {
 
         const expired = isExpired(r.expiry);
-        const appealed = (r.appealed || "").toLowerCase().includes("appeal");
+        const appealed = r.appealed.toLowerCase().includes("appeal");
 
         return `
         <div class="card">
@@ -142,7 +151,7 @@ function search() {
     }).join("");
 }
 
-// auto load
+// auto load on startup
 load();
 
 </script>
