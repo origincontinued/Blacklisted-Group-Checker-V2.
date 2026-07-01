@@ -2,153 +2,425 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Registry Lookup</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCOM Blacklist Registry — Lookup</title>
 <style>
-body {
-    font-family: Arial;
-    background: #0f0f0f;
-    color: white;
-    text-align: center;
-    padding: 40px;
-}
+  :root{
+    --bg:#0d1210;
+    --bg-panel:#141b18;
+    --line:#2a3530;
+    --olive:#5c6e4f;
+    --olive-bright:#8ea26b;
+    --amber:#c98a3a;
+    --red:#b3492f;
+    --text:#dfe6dc;
+    --text-dim:#8d9a8f;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --display: 'Oswald', 'Arial Narrow', sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-input {
-    padding: 10px;
-    width: 280px;
-    border-radius: 6px;
-    border: none;
-}
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top, rgba(94,110,79,0.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    min-height:100vh;
+    padding:0 0 60px 0;
+  }
 
-button {
-    padding: 10px 15px;
-    margin-left: 5px;
-    border-radius: 6px;
-    border: none;
-    background: #2d6cdf;
-    color: white;
-    cursor: pointer;
-}
+  header{
+    border-bottom:2px solid var(--olive);
+    padding:28px 20px 20px;
+    text-align:center;
+    background:
+      repeating-linear-gradient(135deg, rgba(94,110,79,0.05) 0px, rgba(94,110,79,0.05) 2px, transparent 2px, transparent 14px);
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    letter-spacing:0.35em;
+    font-size:11px;
+    color:var(--olive-bright);
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:var(--display);
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    font-size:clamp(26px,5vw,42px);
+    margin:0 0 6px;
+    color:#f2f0e6;
+  }
+  .subhead{
+    color:var(--text-dim);
+    font-size:13px;
+    max-width:560px;
+    margin:0 auto;
+    line-height:1.5;
+  }
 
-.card {
-    margin-top: 20px;
-    padding: 15px;
-    background: #1a1a1a;
-    border-radius: 10px;
-    display: inline-block;
-    text-align: left;
-    width: 420px;
-}
+  main{
+    max-width:720px;
+    margin:0 auto;
+    padding:36px 20px 0;
+  }
 
-.good { color: #4ade80; }
-.bad { color: #fb7185; }
-.warn { color: #facc15; }
+  .search-box{
+    display:flex;
+    gap:10px;
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    padding:14px;
+  }
+  .search-box input{
+    flex:1;
+    background:#0a0f0d;
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:15px;
+    padding:12px 14px;
+    outline:none;
+  }
+  .search-box input:focus{
+    border-color:var(--olive-bright);
+  }
+  .search-box input::placeholder{color:#5a6660;}
+  .search-box button{
+    background:var(--olive);
+    border:none;
+    color:#0d1210;
+    font-family:var(--display);
+    font-weight:600;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    font-size:13px;
+    padding:0 20px;
+    cursor:pointer;
+    transition:background 0.15s;
+  }
+  .search-box button:hover{background:var(--olive-bright);}
+
+  .meta-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:8px;
+    letter-spacing:0.03em;
+  }
+
+  #result{margin-top:26px;}
+
+  .status-card{
+    border:1px solid var(--line);
+    background:var(--bg-panel);
+    padding:22px;
+    animation:reveal 0.25s ease;
+  }
+  @keyframes reveal{from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:translateY(0);}}
+
+  .status-tag{
+    display:inline-block;
+    font-family:var(--display);
+    font-weight:600;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    font-size:12px;
+    padding:5px 12px;
+    margin-bottom:14px;
+  }
+  .tag-expired{background:rgba(94,110,79,0.18); color:var(--olive-bright); border:1px solid var(--olive);}
+  .tag-active{background:rgba(179,73,47,0.18); color:#e08363; border:1px solid var(--red);}
+  .tag-indef{background:rgba(201,138,58,0.18); color:var(--amber); border:1px solid var(--amber);}
+  .tag-clear{background:rgba(255,255,255,0.05); color:var(--text-dim); border:1px solid var(--line);}
+
+  .entry-name{
+    font-family:var(--display);
+    font-size:22px;
+    font-weight:600;
+    color:#f2f0e6;
+    margin:0 0 2px;
+    text-transform:none;
+  }
+  .entry-id{
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:16px;
+  }
+
+  .field{
+    display:grid;
+    grid-template-columns:110px 1fr;
+    gap:10px;
+    padding:9px 0;
+    border-top:1px solid var(--line);
+    font-size:13.5px;
+    line-height:1.5;
+  }
+  .field:first-of-type{border-top:1px solid var(--line);}
+  .field-label{
+    color:var(--olive-bright);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    font-size:11px;
+    padding-top:2px;
+  }
+  .field-value{color:var(--text);}
+
+  .clear-state{
+    text-align:center;
+    padding:20px;
+  }
+  .clear-state .status-tag{margin-bottom:10px;}
+  .clear-state p{color:var(--text-dim); font-size:13px; margin:0;}
+
+  .not-found{
+    text-align:center;
+    padding:30px 20px;
+    color:var(--text-dim);
+    font-size:13.5px;
+    line-height:1.6;
+  }
+  .not-found strong{color:var(--text);}
+
+  footer{
+    max-width:720px;
+    margin:40px auto 0;
+    padding:0 20px;
+    color:#5a6660;
+    font-size:11px;
+    text-align:center;
+    line-height:1.6;
+  }
 </style>
 </head>
-
 <body>
 
-<h1>Registry Lookup</h1>
+<header>
+  <div class="eyebrow">Special Operations Command</div>
+  <h1>Blacklist Registry Lookup</h1>
+  <p class="subhead">Search a Roblox username or user ID to check blacklist status, expiry, and reason for listing.</p>
+</header>
 
-<input id="search" placeholder="Username or Roblox ID">
-<button onclick="searchUser()">Search</button>
+<main>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Enter Roblox username or ID…" autocomplete="off">
+    <button onclick="doSearch()">Search</button>
+  </div>
+  <div class="meta-row">
+    <span id="recordCount"></span>
+    <span>Data current as of source spreadsheet</span>
+  </div>
 
-<div id="results"></div>
+  <div id="result"></div>
+</main>
+
+<footer>
+  Built from a public SOCOM registry spreadsheet. Status is calculated live against today's date;<br>
+  listing data itself is a static snapshot and may not reflect edits made since it was captured.
+</footer>
 
 <script>
+const RECORDS = [
+{u:["kaifromzukii"], id:"4797621207", reason:"Desertion", issued:"03/02/2024", expiry:"02/04/2024", note:""},
+{u:["hoot_potato2"], id:"1883360012", reason:"HICOM Disrespect", issued:"03/02/2024", expiry:"09/03/2024", note:""},
+{u:["NoahMSSSS"], id:"1940768270", reason:"Insubordination", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["Hahayoulox","GAFfps"], id:"999752883", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["Ezflock2"], id:"5233220443", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["JJ_Raptor2"], id:"4723844146", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["Trippygoo"], id:"483821130", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["WhyamIsogoodbro"], id:"2335272352", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["Vvshenok"], id:"3491260102", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:"Appealed"},
+{u:["TrippyGoo"], id:"483821130", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["elvis12372"], id:"560322750", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["Sungmaregold"], id:"3177861855", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["BlazingHavoc","RexHaddock"], id:"396004453", reason:"Tampering with docs", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["GoldenExousia"], id:"140873631", reason:"Trespassing HLS", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["pilota_1204"], id:"4292526432", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["paololaser2"], id:"1439727771", reason:"Desertion", issued:"03/02/2024", expiry:"06/02/2024", note:""},
+{u:["InfoVoice","TrulyNotSad"], id:"4966489655", reason:"Possession of classified documents", issued:"03/03/2024", expiry:"06/03/2024", note:""},
+{u:["CHEESEYxxPOTATOES"], id:"396800092", reason:"HICOM disrespect and racism", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["scropt13fggg"], id:"3333810454", reason:"Trolling and killing the Chief of SOCOM", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["FaZeEAV","zetavir"], id:"2421609211", reason:"Purposely breaking rules to be exiled", issued:"03/03/2024", expiry:"06/03/2024", note:""},
+{u:["tiber8901"], id:"3082379419", reason:"HICOM disrespect and faking pictures to enter SOCOM", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["MaxSkalecki1"], id:"5325240273", reason:"Falsifying proof and alting", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["QueenOfOcean_cookie"], id:"2601703226", reason:"Disrespect to SOCOM", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["cytrix333"], id:"5003488727", reason:"Classified (NSA)", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["Captain_america650","MericalHavoc"], id:"4803940363", reason:"Purposely getting exiled, broke most rules, disrespect", issued:"03/03/2024", expiry:"06/03/2024", note:""},
+{u:["Yo_personnotuse5"], id:"5380228989", reason:"Disrespect, breaking rules, escaping cuffs", issued:"03/03/2024", expiry:"06/03/2024", note:""},
+{u:["DAB_GAMING2012"], id:"2557092516", reason:"Sabotage and false accusations", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["Spark_gamer11"], id:"4502762995", reason:"Desertion", issued:"03/03/2024", expiry:"06/03/2024", note:""},
+{u:["omdmfm"], id:"466992386", reason:"Not in Discord", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["ChustyMax"], id:"802397537", reason:"Mass pinging, disrespect", issued:"03/03/2024", expiry:"N/A", note:""},
+{u:["cooldog900123"], id:"583365830", reason:"Desertion", issued:"04/03/2024", expiry:"06/04/2024", note:""},
+{u:["Vlotukk"], id:"2277645192", reason:"Discharging before serving 1 week", issued:"24/03/2024", expiry:"06/2024", note:""},
+{u:["veteranboy58GRW"], id:"1598899103", reason:"Left without permission and conduct issues toward HICOM, including a self-harm-related threat and a targeted insult; incident was treated as a welfare concern by the group.", issued:"02/04/2024", expiry:"N/A", note:""},
+{u:["ciatopsecre"], id:"893894992", reason:"Joining ranges while in remedial review, cuff abusing, conduct issues", issued:"05/04/2024", expiry:"N/A", note:""},
+{u:["TongPangKurotsaUtong"], id:"5518693727", reason:"Raiding the server and making offensive/racist remarks", issued:"05/04/2024", expiry:"N/A", note:""},
+{u:["SamSamCreative"], id:"957618309", reason:"Discharging before serving 1 week", issued:"06/04/2024", expiry:"09/06/2024", note:""},
+{u:["AspectLogic"], id:"1449102370", reason:"Repeated disrespect toward command staff and rule violations to force an exile; inappropriate conduct toward a HICOM member.", issued:"11/04/2024", expiry:"N/A", note:""},
+{u:["pizzaisgood304"], id:"6062637833", reason:"Alt account of veteranboy58", issued:"15/04/2024", expiry:"N/A", note:""},
+{u:["sveltearcher46"], id:"3170218469", reason:"Lied about having whitelist (WL)", issued:"15/04/2024", expiry:"N/A", note:""},
+{u:["TylerJamesninja24"], id:"1209771629", reason:"Lied about having whitelist (WL)", issued:"16/04/2024", expiry:"N/A", note:""},
+{u:["Seiki_77"], id:"1661563045", reason:"Spreading SOCOM invite links to randoms", issued:"17/04/2024", expiry:"N/A", note:""},
+{u:["O_Alibi"], id:"1765131755", reason:"Impersonating SOCOM personnel", issued:"18/04/2024", expiry:"18/07/2024", note:""},
+{u:["EricoStrikes"], id:"4524548418", reason:"Threatening to leak SOCOM documentation", issued:"22/04/2024", expiry:"N/A", note:""},
+{u:["imstroinglikebull"], id:"2508576675", reason:"Threatening to leak SOCOM documents", issued:"23/04/2024", expiry:"N/A", note:""},
+{u:["nutalott"], id:"864281127", reason:"Desertion on Rangers, disrespecting command, sharing content flagged as unsafe, and threatening HICOM", issued:"29/04/2024", expiry:"N/A", note:""},
+{u:["48kvm"], id:"22276624", reason:"Desertion", issued:"29/04/2024", expiry:"29/07/2024", note:""},
+{u:["lily644444"], id:"1456508847", reason:"Leaking Ranger documents", issued:"29/04/2025", expiry:"N/A", note:""},
+{u:["Fishymango43"], id:"4102635469", reason:"Leaking Ranger documents", issued:"29/04/2025", expiry:"N/A", note:""},
+{u:["Y4FF"], id:"559698730", reason:"Desertion", issued:"01/05/2024", expiry:"01/08/2024", note:""},
+{u:["Ervin312011"], id:"1645951833", reason:"Threatening MIDCOM officers by invoking the owner's name; threatening retaliation after being reassigned", issued:"03/05/2024", expiry:"03/01/2025", note:""},
+{u:["JDevyYT"], id:"5089703594", reason:"Left without discharging", issued:"11/05/2024", expiry:"11/06/2024", note:""},
+{u:["2rhefhjffj"], id:"1889224056", reason:"Disrespecting SOCOM", issued:"11/05/2024", expiry:"11/06/2024", note:""},
+{u:["SpartonWar"], id:"3123377268", reason:"Leaking SOCOM documentation", issued:"25/05/2024", expiry:"N/A", note:""},
+{u:["SPAGATTl"], id:"", reason:"Using an alt account to leak SOCOM documents", issued:"25/05/2024", expiry:"N/A", note:""},
+{u:["youtubr070"], id:"682333654", reason:"Trolling after discharging, disrespect to command, breaking rules on duty", issued:"29/05/2024", expiry:"N/A", note:""},
+{u:["Sub2S1mute_YT"], id:"4431856435", reason:"Inappropriate/sexual comments, harassment and disrespect toward HICOM", issued:"03/06/2024", expiry:"N/A", note:""},
+{u:["Mbm411"], id:"380901762", reason:"Left without serving 1 week", issued:"04/06/2024", expiry:"04/07/2024", note:""},
+{u:["Colton_FCT"], id:"5816478380", reason:"Begging for rank, wasting others' time", issued:"06/06/2024", expiry:"N/A", note:""},
+{u:["B4DG3RCastino","AgenttHavoc"], id:"3956426628", reason:"Lying about whitelist (WL)", issued:"20/06/2024", expiry:"N/A", note:""},
+{u:["Drathvader201155"], id:"4178369400", reason:"Using AI on applications", issued:"24/06/2024", expiry:"N/A", note:""},
+{u:["ERGriffin"], id:"186022792", reason:"Attempted bribery to get into SOCOM", issued:"25/06/2024", expiry:"25/09/2024", note:""},
+{u:["TDS2011"], id:"428373121", reason:"Left without serving 1 week", issued:"26/06/2024", expiry:"26/07/2024", note:""},
+{u:["XxDarkKekexX"], id:"2540751697", reason:"After being removed, made a self-harm-related threat toward staff and shared private messages/false information", issued:"28/06/2024", expiry:"N/A", note:""},
+{u:["Adam_ProKox"], id:"2863007005", reason:"Desertion", issued:"29/06/2024", expiry:"29/09/2024", note:""},
+{u:["wakungdemqnking"], id:"3812218149", reason:"Disrespect toward HICOM, harassment, unprofessionalism, and admin abuse", issued:"01/07/2024", expiry:"01/10/2024", note:""},
+{u:["Adrian13PL"], id:"194589080", reason:"Threatening to leak documents", issued:"03/07/2024", expiry:"N/A", note:""},
+{u:["pha_linh"], id:"3731853851", reason:"Trespassing, disrespecting HICOM, trolling", issued:"08/07/2024", expiry:"08/11/2024", note:""},
+{u:["Henxx103","Sara_Haddock"], id:"5385795421", reason:"Fake whitelist (WL)", issued:"11/07/2024", expiry:"N/A", note:""},
+{u:["Robloxemployee_100","UN99372967"], id:"4426279856", reason:"Fake whitelist (WL)", issued:"11/07/2024", expiry:"N/A", note:""},
+{u:["pjb_201310"], id:"3650219459", reason:"Faking whitelist (WL)", issued:"11/07/2024", expiry:"N/A", note:""},
+{u:["andrewleemtz"], id:"321213750", reason:"Faking whitelist (WL)", issued:"13/07/2024", expiry:"N/A", note:""},
+{u:["KILLERMANBODY77"], id:"412567872", reason:"Faking whitelist (WL)", issued:"17/07/2024", expiry:"N/A", note:""},
+{u:["samsam0310"], id:"141264746", reason:"Lying about whitelist (WL)", issued:"31/07/2024", expiry:"N/A", note:""},
+{u:["ejwhwhrg"], id:"1215675962", reason:"Racism and explicit language", issued:"01/08/2024", expiry:"N/A", note:""},
+{u:["PunchMadeJoshh"], id:"2703375991", reason:"Severe racist remarks, possible raiding, disrespect", issued:"02/08/2024", expiry:"N/A", note:""},
+{u:["BurgiesWorld"], id:"1286470178", reason:"Affiliated with a blacklisted individual", issued:"03/08/2024", expiry:"N/A", note:"Appealed"},
+{u:["BigCityGerald"], id:"4170988441", reason:"Lying about whitelist (WL)", issued:"06/08/2024", expiry:"06/09/2024", note:""},
+{u:["VidPhone"], id:"453041899", reason:"Desertion", issued:"07/08/2024", expiry:"07/11/2024", note:""},
+{u:["kaiihavoc","KaiiHaddock"], id:"317749724", reason:"Classified", issued:"08/08/2024", expiry:"N/A", note:""},
+{u:["Auri0307"], id:"779907851", reason:"Lying about whitelist (WL)", issued:"11/08/2024", expiry:"N/A", note:""},
+{u:["iwillwinhahago"], id:"3878902925", reason:"Desertion", issued:"11/08/2024", expiry:"11/11/2024", note:""},
+{u:["Firefox4379"], id:"1545405852", reason:"Lying about whitelist (WL)", issued:"14/08/2024", expiry:"14/09/2024", note:""},
+{u:["patriziusmaximus"], id:"3804476718", reason:"Lying about whitelist (WL)", issued:"15/08/2024", expiry:"15/09/2024", note:""},
+{u:["riley132487"], id:"1378692484", reason:"NSA orders", issued:"20/08/2024", expiry:"N/A", note:""},
+{u:["stephfrank_gallagher"], id:"195152065", reason:"Lied about accidentally leaving the group to be re-added", issued:"26/08/2024", expiry:"26/10/2024", note:""},
+{u:["ii_Da3rk","i_Cryptz"], id:"4245917570", reason:"Lying about whitelist (WL)", issued:"27/08/2024", expiry:"27/09/2024", note:""},
+{u:["RICH_GUYHILKI"], id:"5264630309", reason:"Trolling in application", issued:"28/08/2024", expiry:"28/09/2024", note:""},
+{u:["PharohHavoc","duophar"], id:"3654253639", reason:"Repeated cuff/tool abuse after being exiled", issued:"28/08/2024", expiry:"28/11/2024", note:""},
+{u:["D3rrick287"], id:"2556744031", reason:"Racism and harassment", issued:"28/08/2024", expiry:"N/A", note:""},
+{u:["driplordbros"], id:"2684824461", reason:"Repeatedly asking for application status", issued:"29/08/2024", expiry:"N/A", note:""}
+];
 
-const URL =
-"https://docs.google.com/spreadsheets/d/1EaZfeDPhuE48ZX8-PdE01MWW-JUZkvsqBmdICfgcdls/gviz/tq?tqx=out:json&gid=1195980622";
-
-// 🧠 PRIVATE INDEXED DATABASE
-const userIndex = new Map();
-let fullDatabase = [];
-
-// ---------------- LOAD & BUILD INDEX ----------------
-async function load() {
-    const res = await fetch(URL);
-    const text = await res.text();
-
-    const json = JSON.parse(text.substring(47).slice(0, -2));
-    const rows = json.table.rows;
-
-    rows.forEach(r => {
-
-        const record = {
-            username: String(r.c[0]?.v || "").trim().toLowerCase(),
-            id: String(r.c[1]?.v || "").trim(),
-            reason: String(r.c[2]?.v || ""),
-            issued: String(r.c[3]?.v || ""),
-            expiry: String(r.c[4]?.v || ""),
-            duration: String(r.c[5]?.v || ""),
-            appealable: String(r.c[6]?.v || ""),
-            appealed: String(r.c[7]?.v || "")
-        };
-
-        fullDatabase.push(record);
-
-        // 🔥 INDEX BOTH USERNAME + ID
-        if (record.username) userIndex.set(record.username, record);
-        if (record.id) userIndex.set(record.id, record);
-    });
-
-    console.log("Indexed users:", userIndex.size);
+function parseDMY(str){
+  if(!str) return null;
+  const parts = str.split("/").map(s=>s.trim());
+  if(parts.length < 2) return null;
+  let [d,m,y] = parts;
+  if(!y) y = new Date().getFullYear().toString();
+  d = parseInt(d,10); m = parseInt(m,10); y = parseInt(y,10);
+  if(!d) d = 1;
+  if(isNaN(d) || isNaN(m) || isNaN(y)) return null;
+  return new Date(y, m-1, d);
 }
 
-// ---------------- EXPIRY CHECK ----------------
-function isExpired(dateStr) {
-    if (!dateStr) return false;
-
-    const d = new Date(dateStr);
-    if (isNaN(d)) return false;
-
-    return d.getTime() < Date.now();
+function formatDate(dt){
+  if(!dt) return "—";
+  return dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
 }
 
-// ---------------- SEARCH (FAST LOOKUP) ----------------
-function searchUser() {
-    const q = document.getElementById("search").value.trim().toLowerCase();
-    const out = document.getElementById("results");
+document.getElementById('recordCount').textContent = RECORDS.length + " records loaded";
 
-    if (!q) return;
+function normalize(s){
+  return s.toLowerCase().replace(/[^a-z0-9]/g,'');
+}
 
-    const result = userIndex.get(q);
+function findRecords(query){
+  const q = normalize(query);
+  if(!q) return [];
+  return RECORDS.filter(r => {
+    if(r.id && r.id === query.trim()) return true;
+    return r.u.some(name => normalize(name) === q);
+  });
+}
 
-    if (!result) {
-        out.innerHTML = "<p class='bad'>User NOT found in database</p>";
-        return;
-    }
+function statusFor(rec){
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  if(!rec.expiry || rec.expiry.trim().toUpperCase() === "N/A"){
+    return {tag:"tag-indef", label:"No expiry listed", detail:"This entry has no expiration date on record — treat as indefinite unless the group states otherwise."};
+  }
+  const exp = parseDMY(rec.expiry);
+  if(!exp){
+    return {tag:"tag-indef", label:"Expiry unclear", detail:"The expiry field (\"" + rec.expiry + "\") couldn't be parsed as a full date."};
+  }
+  if(exp < today){
+    return {tag:"tag-expired", label:"Expired", detail:"Listing expired on " + formatDate(exp) + "."};
+  } else {
+    return {tag:"tag-active", label:"Active", detail:"Listing is active until " + formatDate(exp) + "."};
+  }
+}
 
-    const expired = isExpired(result.expiry);
-    const appealed = result.appealed.toLowerCase().includes("appeal");
-
-    out.innerHTML = `
-        <div class="card">
-            <b>Username:</b> ${result.username}<br>
-            <b>Roblox ID:</b> ${result.id}<br><br>
-
-            <b>Reason:</b> ${result.reason}<br>
-            <b>Issued:</b> ${result.issued}<br>
-
-            <b>Expiry:</b>
-            <span class="${expired ? 'bad' : 'good'}">
-                ${result.expiry || "N/A"} ${expired ? "(EXPIRED)" : "(ACTIVE)"}
-            </span><br>
-
-            <b>Duration:</b> ${result.duration}<br>
-            <b>Appealable:</b> ${result.appealable}<br>
-
-            <b>Status:</b>
-            <span class="${appealed ? 'warn' : 'good'}">
-                ${appealed ? "APPEALED" : "CLEAR"}
-            </span>
+function renderResults(matches, rawQuery){
+  const box = document.getElementById('result');
+  if(matches.length === 0){
+    box.innerHTML = `
+      <div class="status-card not-found">
+        <div class="status-tag tag-clear">Not Found</div>
+        <p><strong>"${escapeHtml(rawQuery)}"</strong> does not appear on the registry.<br>No blacklist entry matches this username or ID.</p>
+      </div>`;
+    return;
+  }
+  box.innerHTML = matches.map(rec => {
+    const st = statusFor(rec);
+    return `
+      <div class="status-card" style="margin-bottom:14px;">
+        <div class="status-tag ${st.tag}">${st.label}</div>
+        <p class="entry-name">${escapeHtml(rec.u.join(" / "))}</p>
+        <p class="entry-id">Roblox ID: ${rec.id ? escapeHtml(rec.id) : "Not on record"}</p>
+        <div class="field">
+          <div class="field-label">Reason</div>
+          <div class="field-value">${escapeHtml(rec.reason)}</div>
         </div>
-    `;
+        <div class="field">
+          <div class="field-label">Issued</div>
+          <div class="field-value">${formatDate(parseDMY(rec.issued))}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Expiry</div>
+          <div class="field-value">${st.detail}</div>
+        </div>
+        ${rec.note ? `<div class="field"><div class="field-label">Notes</div><div class="field-value">${escapeHtml(rec.note)}</div></div>` : ""}
+      </div>`;
+  }).join("");
 }
 
-// auto load
-load();
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
+function doSearch(){
+  const val = document.getElementById('searchInput').value;
+  if(!val.trim()){
+    document.getElementById('result').innerHTML = "";
+    return;
+  }
+  renderResults(findRecords(val), val);
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter') doSearch();
+});
 </script>
 
 </body>
