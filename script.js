@@ -1,1 +1,0 @@
-body{font-family:Arial;background:#111;color:#fff;padding:40px}input,button{padding:8px}
