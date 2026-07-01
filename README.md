@@ -1,0 +1,1 @@
+Upload to GitHub and deploy with Vercel. Note: CSV parsing is simplistic; quoted commas are not handled.
